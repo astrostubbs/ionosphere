@@ -33,8 +33,8 @@ This project provides:
 ## Documentation
 
 See the `docs/` folder for user guides:
-- `Chris_s_quick_and_dirty_HF_propagator.pdf` - HF propagation simulator guide
-- `HF_Polarization_physics.pdf` - Comprehensive physics (~50 pages)
+- `HF3D_propagation_simulator_manual.pdf` - 3D HF propagation simulator manual
+- `HF_Polarization_physics.pdf` - Comprehensive magnetoionic physics (~50 pages)
 - `Phase_Analysis_Users_Guide.pdf` - Phase stability analysis guide
 - `Phase_analysis_helper_programs_user_s_guide.pdf` - Helper tools guide
 
