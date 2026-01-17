@@ -30,6 +30,12 @@ This project provides:
 
 5. **Spectrum Analysis** (`check_spectrum.py`) - View carrier and sideband structure
 
+6. **Data Collection Scripts** (`scripts/`) - Shell scripts for KiwiSDR data capture:
+   - `Take3Freq.sh` - Capture 3 frequencies simultaneously from one receiver
+   - `TakeBothTriplets.sh` - Capture from two geographically separated receivers
+   - `TakeData.sh` - Single-frequency capture with verbose output
+   - `RunEvery10Min.sh` - Scheduler for continuous monitoring
+
 ## Documentation
 
 See the `docs/` folder for user guides:
@@ -78,6 +84,78 @@ python3 wwv_geographic_correlation.py 20260101.1148
 
 # Analyze all pairs from a specific date
 python3 wwv_geographic_correlation.py --date 20260101
+```
+
+### Data Collection Scripts
+
+The `scripts/` directory contains shell scripts for capturing IQ data from KiwiSDR receivers.
+
+**Prerequisites:** These scripts require `kiwirecorder.py` from the [kiwiclient](https://github.com/jks-prv/kiwiclient) repository. Run from the kiwiclient directory or ensure kiwirecorder.py is in your PATH.
+
+#### URL Format (Important!)
+
+The scripts accept KiwiSDR URLs in these formats:
+
+```bash
+# Full URL with protocol and port (recommended)
+http://22463.proxy.kiwisdr.com:8073
+
+# Without protocol (http:// assumed)
+22463.proxy.kiwisdr.com:8073
+
+# Without port (8073 assumed)
+http://22463.proxy.kiwisdr.com
+```
+
+**Common KiwiSDR proxy URLs:**
+- `22463.proxy.kiwisdr.com:8073` - Sudbury, MA
+- `22350.proxy.kiwisdr.com:8073` - Cambridge, MA
+
+#### Take3Freq.sh - Triplet Capture
+
+Captures 3 WWV/CHU frequencies simultaneously from a single receiver:
+
+```bash
+cd /path/to/kiwiclient
+./scripts/Take3Freq.sh http://22463.proxy.kiwisdr.com:8073
+```
+
+Edit the `FREQS_KHZ` array in the script to change frequencies:
+- Nighttime default: `(3330 5000 7850)` - CHU 3.33, WWV 5, CHU 7.85 MHz
+- Daytime option: `(7850 20000 25000)` - CHU 7.85, WWV 20, WWV 25 MHz
+
+#### TakeBothTriplets.sh - Geographic Correlation Capture
+
+Runs Take3Freq.sh on two receivers simultaneously for geographic correlation studies:
+
+```bash
+./scripts/TakeBothTriplets.sh
+```
+
+Edit receiver URLs in the script to use different KiwiSDRs.
+
+#### TakeData.sh - Single Frequency Capture
+
+Captures one frequency with detailed output:
+
+```bash
+./scripts/TakeData.sh http://22463.proxy.kiwisdr.com:8073 20000
+./scripts/TakeData.sh 22463.proxy.kiwisdr.com:8073 5000
+```
+
+#### RunEvery10Min.sh - Continuous Monitoring
+
+Runs TakeBothTriplets.sh every 10 minutes for long-term monitoring:
+
+```bash
+# Run in foreground (Ctrl+C to stop)
+./scripts/RunEvery10Min.sh
+
+# Run in background with logging
+nohup ./scripts/RunEvery10Min.sh > capture.log 2>&1 &
+
+# Run in screen/tmux session
+screen -S kiwi ./scripts/RunEvery10Min.sh
 ```
 
 ## Requirements
