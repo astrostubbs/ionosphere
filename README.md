@@ -37,6 +37,7 @@ See the `docs/` folder for user guides:
 - `HF_Polarization_physics.pdf` - Comprehensive magnetoionic physics (~50 pages)
 - `Phase_Analysis_Users_Guide.pdf` - Phase stability analysis guide
 - `Phase_analysis_helper_programs_user_s_guide.pdf` - Helper tools guide
+- `Geographic_Correlation_Users_Guide.pdf` - Multi-receiver geographic correlation guide
 
 ## Usage
 
@@ -64,6 +65,19 @@ python3 wwv_phase_analysis_final.py --batch "*.wav"
 
 ```bash
 python3 wwv_triplet_analysis.py 20260107.1044
+```
+
+### Geographic Correlation
+
+```bash
+# List available receiver pairs
+python3 wwv_geographic_correlation.py --list
+
+# Analyze specific timestamp
+python3 wwv_geographic_correlation.py 20260101.1148
+
+# Analyze all pairs from a specific date
+python3 wwv_geographic_correlation.py --date 20260101
 ```
 
 ## Requirements

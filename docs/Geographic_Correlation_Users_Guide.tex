@@ -1,0 +1,406 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single
+}
+\lstset{style=mystyle}
+
+\title{Geographic Correlation Analysis\\User's Guide}
+\author{Christopher Stubbs\\[0.5em]\small Analysis developed with Claude Code}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Overview}
+
+The \texttt{wwv\_geographic\_correlation.py} script analyzes correlations in signal fading and phase stability between geographically separated receivers observing the same WWV frequency simultaneously. This reveals the \textbf{spatial coherence scale} of ionospheric disturbances.
+
+\subsection{Key Questions Addressed}
+
+\begin{enumerate}
+    \item Are fades correlated between receivers at the same frequency?
+    \item Is phase stability correlated between receivers?
+    \item How do correlations depend on frequency (2.5, 5, 10 MHz, etc.)?
+\end{enumerate}
+
+\subsection{Scientific Background}
+
+Two KiwiSDR receivers separated by $\sim$30 km observe the same WWV transmissions. If ionospheric structures are large compared to the receiver separation, fades should be correlated. If structures are small (on the order of the separation distance), fades will be independent.
+
+This spatial coherence information is critical for understanding:
+\begin{itemize}
+    \item Whether adaptive ionospheric correction at one site would help nearby sites
+    \item The scale of ionospheric turbulence structures
+    \item How propagation effects decorrelate over distance
+\end{itemize}
+
+\section{Installation and Requirements}
+
+\subsection{Dependencies}
+
+\begin{lstlisting}[language=bash]
+pip install numpy matplotlib scipy
+\end{lstlisting}
+
+\subsection{File Location}
+
+The script should be run from a directory containing KiwiSDR IQ recordings in the standard filename format (see Section~\ref{sec:input}).
+
+\section{Command Line Usage}
+
+\subsection{Basic Syntax}
+
+\begin{lstlisting}[language=bash]
+python wwv_geographic_correlation.py [options] [timestamp]
+\end{lstlisting}
+
+\subsection{Arguments and Options}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Argument/Option} & \textbf{Description} \\
+\midrule
+\texttt{timestamp} & Optional. Specific timestamp to analyze (e.g., \texttt{20260101.1148}) \\
+\texttt{--date DATE} & Analyze all pairs from a specific date (e.g., \texttt{20260101}) \\
+\texttt{--list} & List available receiver pairs without analysis \\
+\texttt{--no-plot} & Skip plot generation (text output only) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Usage Examples}
+
+\begin{lstlisting}[language=bash]
+# Analyze all available receiver pairs
+python wwv_geographic_correlation.py
+
+# Analyze a specific timestamp
+python wwv_geographic_correlation.py 20260101.1148
+
+# Analyze all pairs from a specific date
+python wwv_geographic_correlation.py --date 20260101
+
+# List available receiver pairs
+python wwv_geographic_correlation.py --list
+
+# Analyze without generating plots
+python wwv_geographic_correlation.py --no-plot
+\end{lstlisting}
+
+\section{Input File Requirements}
+\label{sec:input}
+
+\subsection{Filename Format}
+
+The script expects KiwiSDR IQ WAV files with the standard naming convention:
+
+\begin{lstlisting}
+YYYYMMDD.HHMM.RXID.proxy.kiwisdr.com.freqXXXXX.SRATE.wav
+\end{lstlisting}
+
+\noindent Example filenames:
+\begin{lstlisting}
+20260101.1148.22350.proxy.kiwisdr.com.freq5000.20000.wav  (Cambridge)
+20260101.1148.22463.proxy.kiwisdr.com.freq5000.20000.wav  (Sudbury)
+\end{lstlisting}
+
+\subsection{Required File Structure}
+
+For geographic correlation analysis, you need:
+\begin{itemize}
+    \item At least two receivers (different \texttt{RXID} values)
+    \item Same timestamp (\texttt{YYYYMMDD.HHMM})
+    \item Same frequency (\texttt{freqXXXXX})
+    \item Stereo I/Q format WAV files
+\end{itemize}
+
+\subsection{Complete Sets}
+
+A ``complete set'' requires both receivers to have recordings at the same frequencies. The script automatically identifies which timestamps have complete sets for analysis.
+
+\section{Receiver Configuration}
+
+\subsection{Default Receiver Definitions}
+
+The script has built-in definitions for known receivers:
+
+\begin{lstlisting}[language=Python]
+RECEIVER_INFO = {
+    '22350': {'name': 'Cambridge', 'location': 'Cambridge, MA'},
+    '22463': {'name': 'Sudbury', 'location': 'Sudbury, MA'},
+}
+BASELINE_KM = 32  # Approximate distance between receivers
+\end{lstlisting}
+
+\subsection{Adding New Receivers}
+
+To add new receiver locations, edit the \texttt{RECEIVER\_INFO} dictionary at the top of the script. Also update \texttt{BASELINE\_KM} if the separation distance differs.
+
+\section{Configuration Parameters}
+
+Key configurable parameters at the top of the script:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llp{6cm}@{}}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{T\_TRIM\_START} & 2.0 s & Seconds to trim from recording start \\
+\texttt{SNR\_THRESHOLD\_DB} & 12.0 dB & Threshold below 90th percentile for fade detection \\
+\texttt{CARRIER\_FILTER\_BW} & 500 Hz & Lowpass filter bandwidth for carrier extraction \\
+\texttt{PHASE\_JUMP\_THRESHOLD} & 1.5 rad & Threshold for phase splice detection \\
+\texttt{FADE\_MARGIN\_SAMPLES} & 100 & Samples to expand fade regions \\
+\texttt{TAU\_ROUNDTRIP} & 0.020 s & Round-trip time for adaptive correction assessment \\
+\texttt{XCORR\_MAX\_LAG\_SEC} & 10.0 s & Maximum lag for cross-correlation computation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Output Files}
+
+\subsection{Generated Plots}
+
+For each analyzed timestamp, the script generates multiple diagnostic plots:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{Filename} & \textbf{Content} \\
+\midrule
+\texttt{geo\_TIMESTAMP\_amplitude.png} & Amplitude time series comparison between receivers \\
+\texttt{geo\_TIMESTAMP\_fading.png} & Fade pattern comparison with timeline and breakdown \\
+\texttt{geo\_TIMESTAMP\_xcorr.png} & Amplitude cross-correlation functions \\
+\texttt{geo\_TIMESTAMP\_scatter.png} & Amplitude scatter plots (receiver 1 vs receiver 2) \\
+\texttt{geo\_TIMESTAMP\_phase.png} & Phase correlation scatter plots \\
+\texttt{geo\_TIMESTAMP\_XMHz\_phase\_stability.png} & Detailed phase stability per frequency \\
+\texttt{geo\_TIMESTAMP\_structure\_function.png} & Structure function $D(\tau)$ comparison \\
+\texttt{geo\_TIMESTAMP\_spectrum.png} & Carrier power spectrum comparison \\
+\texttt{geo\_TIMESTAMP\_fade\_stats.png} & Amplitude CDF and fade statistics \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Data Output File}
+
+A tab-delimited text file \texttt{geo\_TIMESTAMP\_data.txt} containing:
+\begin{itemize}
+    \item Metadata header with analysis parameters
+    \item Summary table by frequency (correlation metrics, fade statistics)
+    \item Structure function $D(\tau)$ values for all time lags
+    \item Detailed fade statistics for each receiver
+    \item Amplitude percentile tables
+\end{itemize}
+
+\subsection{Batch Summary}
+
+When analyzing multiple timestamps, an additional summary is generated:
+
+\begin{itemize}
+    \item \texttt{geo\_correlation\_summary.png} --- Box plots and scatter plots showing correlation statistics across all analyzed timestamps, broken down by frequency
+\end{itemize}
+
+\section{Key Metrics and Interpretation}
+
+\subsection{Amplitude Correlation}
+
+The Pearson correlation coefficient $r$ between amplitude time series from both receivers:
+\begin{itemize}
+    \item $r > 0.7$: Strong correlation --- fading is highly correlated
+    \item $0.3 < r < 0.7$: Moderate correlation
+    \item $r < 0.3$: Weak correlation --- ionospheric structures are small relative to baseline
+\end{itemize}
+
+\subsection{Fade Correlation}
+
+Binary fade mask correlation:
+\begin{itemize}
+    \item \textbf{Pearson correlation} of fade masks (1 = faded, 0 = clear)
+    \item \textbf{Jaccard similarity}: $J = \frac{|A \cap B|}{|A \cup B|}$ where $A$ and $B$ are the sets of faded samples at each receiver
+\end{itemize}
+
+Higher Jaccard values indicate fades occur simultaneously at both receivers.
+
+\subsection{Phase Correlation}
+
+During jointly valid (non-faded) periods:
+\begin{itemize}
+    \item \textbf{Phase correlation}: Pearson $r$ of detrended phase
+    \item \textbf{Phase derivative correlation}: Correlation of $d\phi/dt$, which indicates whether phase fluctuations track together
+\end{itemize}
+
+\subsection{Structure Function}
+
+The phase structure function $D(\tau) = \langle[\phi(t+\tau) - \phi(t)]^2\rangle$ measures phase variance at different time lags:
+\begin{itemize}
+    \item \textbf{RMS @ 20 ms} is the critical metric for adaptive correction feasibility
+    \item $< 0.5$ rad: Good --- suitable for closed-loop correction
+    \item $0.5$--$1.0$ rad: Marginal
+    \item $> 1.0$ rad: Poor --- correction difficult
+\end{itemize}
+
+\subsection{Fade Statistics}
+
+For each receiver:
+\begin{itemize}
+    \item \textbf{Fade fraction}: Percentage of time below threshold
+    \item \textbf{Fade rate}: Number of fade events per minute
+    \item \textbf{Fade duration}: Mean and maximum fade length
+    \item \textbf{Fade depth}: How far signal drops below threshold
+\end{itemize}
+
+\section{Example Analysis Workflow}
+
+\subsection{Step 1: Check Available Data}
+
+\begin{lstlisting}[language=bash]
+python wwv_geographic_correlation.py --list
+\end{lstlisting}
+
+Example output:
+\begin{lstlisting}
+Available timestamps with complete receiver pairs:
+------------------------------------------------------------
+  20260101.1148: ['Cambridge', 'Sudbury'] @ [2.5, 5.0, 10.0] MHz
+  20260101.1415: ['Cambridge', 'Sudbury'] @ [2.5, 5.0, 10.0] MHz
+\end{lstlisting}
+
+\subsection{Step 2: Analyze Specific Timestamp}
+
+\begin{lstlisting}[language=bash]
+python wwv_geographic_correlation.py 20260101.1148
+\end{lstlisting}
+
+\subsection{Step 3: Review Output}
+
+The script prints a summary table and generates plots. Example console output:
+
+\begin{lstlisting}
+======================================================================
+GEOGRAPHIC CORRELATION ANALYSIS: 20260101.1148
+Receivers: ['Cambridge', 'Sudbury']
+Baseline: ~32 km
+======================================================================
+Common frequencies: [2.5, 5.0, 10.0] MHz
+
+  Analyzing 2.5 MHz: Cambridge vs Sudbury
+    Cambridge: 87% valid, RMS@20ms=0.312 rad
+    Sudbury: 82% valid, RMS@20ms=0.298 rad
+    Amplitude correlation: r=0.652 at lag=0.0 ms
+    Fade correlation: r=0.445, Jaccard=0.312
+    Joint valid: 75%
+    Phase correlation: r=0.234
+    Phase derivative correlation: r=0.187
+\end{lstlisting}
+
+\subsection{Step 4: Batch Analysis}
+
+For comprehensive study across multiple timestamps:
+
+\begin{lstlisting}[language=bash]
+python wwv_geographic_correlation.py --date 20260101
+\end{lstlisting}
+
+This generates all individual plots plus a summary showing trends across timestamps.
+
+\section{Interpretation Guidelines}
+
+\subsection{Highly Correlated Fading (Jaccard $> 0.5$)}
+
+\begin{itemize}
+    \item Ionospheric structures are large compared to the 32 km baseline
+    \item Adaptive correction at one site may benefit nearby sites
+    \item Often seen at lower frequencies where ionospheric effects are stronger
+\end{itemize}
+
+\subsection{Uncorrelated Fading (Jaccard $< 0.2$)}
+
+\begin{itemize}
+    \item Small-scale ionospheric turbulence dominates
+    \item Each receiver experiences independent propagation conditions
+    \item Adaptive correction would need to be site-specific
+\end{itemize}
+
+\subsection{Frequency Dependence}
+
+Expect to see:
+\begin{itemize}
+    \item \textbf{Lower frequencies} (2.5, 5 MHz): Higher absorption, potentially more correlated large-scale structure
+    \item \textbf{Higher frequencies} (10, 15, 20 MHz): Less ionospheric effect, may show different correlation patterns depending on whether single or multiple modes are present
+\end{itemize}
+
+\section{Troubleshooting}
+
+\subsection{No Complete Receiver Pairs Found}
+
+\begin{itemize}
+    \item Check that files follow the expected naming convention
+    \item Verify timestamps match exactly between receivers
+    \item Ensure both receivers have recordings at the same frequencies
+\end{itemize}
+
+\subsection{Insufficient Joint Valid Data}
+
+If phase correlation shows ``Insufficient joint valid data'':
+\begin{itemize}
+    \item Both receivers have extensive fading at the same time
+    \item Try a different timestamp or frequency with better propagation
+\end{itemize}
+
+\subsection{Unexpected Correlation Values}
+
+\begin{itemize}
+    \item Check that recordings truly cover the same time period
+    \item Verify receiver clocks are synchronized
+    \item Large timing offsets appear in the cross-correlation peak lag
+\end{itemize}
+
+\section{References}
+
+\begin{itemize}
+    \item WWV Phase Analysis User's Guide --- detailed phase stability analysis
+    \item HF Polarization Physics --- magnetoionic propagation background
+    \item HF 3D Propagation Simulator Manual --- ray tracing simulations
+\end{itemize}
+
+\vspace{2em}
+\noindent\rule{\textwidth}{0.4pt}
+\small
+\noindent\textit{Analysis developed with Claude Code, January 2026.}
+
+\end{document}
